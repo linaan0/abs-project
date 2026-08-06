@@ -1,0 +1,15 @@
+# CityFlow source
+CityFlow/
+.idea/
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# CityFlow generated replay files
+replay.txt
+replay_roadnet.json
