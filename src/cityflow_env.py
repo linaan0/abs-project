@@ -103,7 +103,28 @@ class CityFlowEnv:
         self._current_phase = {iid: 0 for iid in self.inter_ids}
         return self._get_obs()
 
-    def _get_obs(self):
+
+    def step(self, actions): # primenuvanje na akcijata koja ja prezel sekoj od agentite(raskrsnici)
+
+        if isinstance(actions, (list, np.ndarray)):
+            actions = {iid: int(a) for iid, a in zip(self.inter_ids, actions)}
+
+        for iid, phase in actions.items():
+            phase = min(phase, len(self.phases[iid]) - 1)  # clip to valid range
+            self.eng.set_tl_phase(iid, phase)
+            self._current_phase[iid] = phase
+
+        for _ in range(self.step_length_per_action):
+            self.eng.next_step()
+            self.current_time += 1
+
+        obs = self._get_obs()
+        done = self.current_time >= self.episode_steps
+        info = {"avg_travel_time": self.eng.get_average_travel_time()}
+
+        return obs, self.get_global_state(obs), done, info
+
+    def _get_obs(self): # za momentalna sostojba, lokalen observation za sekoja raskrsnica
         vcount = self.eng.get_lane_vehicle_count()
         wcount = self.eng.get_lane_waiting_vehicle_count()
 
@@ -121,3 +142,5 @@ class CityFlowEnv:
 
             obs[iid] = np.array(lane_feats + phase_onehot, dtype=np.float32)
         return obs
+    def get_global_state(self, obs): # site local pogledi konkatenirani
+        return np.concatenate([obs[iid] for iid in self.inter_ids])
