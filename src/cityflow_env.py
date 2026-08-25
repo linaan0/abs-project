@@ -119,10 +119,11 @@ class CityFlowEnv:
             self.current_time += 1
 
         obs = self._get_obs()
+        reward = self._get_shared_reward()
         done = self.current_time >= self.episode_steps
         info = {"avg_travel_time": self.eng.get_average_travel_time()}
 
-        return obs, self.get_global_state(obs), done, info
+        return obs, self.get_global_state(obs), reward, done, info
 
     def _get_obs(self): # za momentalna sostojba, lokalen observation za sekoja raskrsnica
         vcount = self.eng.get_lane_vehicle_count()
@@ -142,5 +143,11 @@ class CityFlowEnv:
 
             obs[iid] = np.array(lane_feats + phase_onehot, dtype=np.float32)
         return obs
+
     def get_global_state(self, obs): # site local pogledi konkatenirani
         return np.concatenate([obs[iid] for iid in self.inter_ids])
+
+    def _get_shared_reward(self): #zaednicka nagrada za site agenti
+        wcount = self.eng.get_lane_waiting_vehicle_count()
+        total_waiting = sum(wcount.values())
+        return -float(total_waiting) / max(self.n_agents, 1)
