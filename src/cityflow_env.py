@@ -97,3 +97,27 @@ class CityFlowEnv:
         self._max_phases = max_phases
         return max_lanes * 2 + max_phases
 
+    def reset(self):
+        self.eng.reset()
+        self.current_time = 0
+        self._current_phase = {iid: 0 for iid in self.inter_ids}
+        return self._get_obs()
+
+    def _get_obs(self):
+        vcount = self.eng.get_lane_vehicle_count()
+        wcount = self.eng.get_lane_waiting_vehicle_count()
+
+        obs = {}
+        for iid in self.inter_ids:
+            lane_feats = []
+            for lane in self.in_lanes[iid]:
+                lane_feats.append(vcount.get(lane, 0))
+                lane_feats.append(wcount.get(lane, 0))
+            pad = (self._max_lanes * 2) - len(lane_feats)
+            lane_feats.extend([0] * pad)
+
+            phase_onehot = [0] * self._max_phases
+            phase_onehot[self._current_phase[iid]] = 1
+
+            obs[iid] = np.array(lane_feats + phase_onehot, dtype=np.float32)
+        return obs
